@@ -1,5 +1,8 @@
 name: Run Chartink AI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  
 on:
   schedule:
   - cron: '0 9 * * *'    # 14:30 IST
