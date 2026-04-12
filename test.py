@@ -2,6 +2,8 @@ import time
 from collections import Counter
 import pandas as pd
 from playwright.sync_api import sync_playwright
+import os
+import requests
 
 # ==========================================
 # CONFIG
@@ -9,6 +11,19 @@ from playwright.sync_api import sync_playwright
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
 HEADLESS = True
 
+def send_to_telegram(message):
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    CHAT_ID = os.getenv("CHAT_ID")
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+
+    requests.post(url, data=payload)
 
 # ==========================================
 # SCRAPER ENGINE (STABLE VERSION)
@@ -114,12 +129,18 @@ def save_results(common, ranked):
     df = df.sort_values(by="Scanner Count", ascending=False)
 
     # Pretty print table
-    print(tabulate(df, headers="keys", tablefmt="fancy_grid", showindex=False))
+    table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
+    print(table)
+
+    message = f"📊 *Chartink AI Signals*\n\n```\n{table}\n```"
+    send_to_telegram(message)
     # Save
     df.to_csv("filtered_stocks.csv", index=False)
 
     print("\n✅ Saved: filtered_stocks.csv")
+
+
 # ==========================================
 # MAIN PIPELINE
 # ==========================================
