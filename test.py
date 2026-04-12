@@ -134,16 +134,17 @@ def save_results(common, ranked):
     print(table)
 
     message = f"📊 *Chartink AI Signals*\n\n```\n{table}\n```"
+    
     def send_to_telegram(message):
-    BOT_TOKEN = os.getenv("BOT_TOKEN")
-    CHAT_ID = os.getenv("CHAT_ID")
+        BOT_TOKEN = os.getenv("BOT_TOKEN")
+        CHAT_ID = os.getenv("CHAT_ID")
 
-    print("BOT_TOKEN:", BOT_TOKEN)
-    print("CHAT_ID:", CHAT_ID)
+        print("BOT_TOKEN:", BOT_TOKEN)
+        print("CHAT_ID:", CHAT_ID)
 
-    if not BOT_TOKEN or not CHAT_ID:
-        print("❌ Missing Telegram credentials")
-        return
+        if not BOT_TOKEN or not CHAT_ID:
+            print("❌ Missing Telegram credentials")
+            return
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
@@ -156,6 +157,7 @@ def save_results(common, ranked):
     response = requests.post(url, data=payload)
 
     print("Telegram response:", response.text)
+    
     # Save
     df.to_csv("filtered_stocks.csv", index=False)
 
