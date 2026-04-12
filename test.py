@@ -4,6 +4,7 @@ import pandas as pd
 from playwright.sync_api import sync_playwright
 import os
 import requests
+from tabulate import tabulate
 
 # ==========================================
 # CONFIG
@@ -11,9 +12,16 @@ import requests
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
 HEADLESS = True
 
+# ==========================================
+# TELEGRAM FUNCTION
+# ==========================================
 def send_to_telegram(message):
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     CHAT_ID = os.getenv("CHAT_ID")
+
+    if not BOT_TOKEN or not CHAT_ID:
+        print("❌ Missing Telegram credentials")
+        return
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
@@ -23,10 +31,13 @@ def send_to_telegram(message):
         "parse_mode": "Markdown"
     }
 
-    requests.post(url, data=payload)
+    response = requests.post(url, data=payload)
+
+    print("Telegram response:", response.text)
+
 
 # ==========================================
-# SCRAPER ENGINE (STABLE VERSION)
+# SCRAPER ENGINE
 # ==========================================
 def scrape_chartink_dashboard(url):
     widget_results = []
@@ -38,7 +49,6 @@ def scrape_chartink_dashboard(url):
         print("Opening dashboard...")
         page.goto(url)
 
-        # Wait for page load + JS rendering
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(5000)
 
@@ -46,7 +56,6 @@ def scrape_chartink_dashboard(url):
         page.mouse.wheel(0, 5000)
         page.wait_for_timeout(3000)
 
-        # Get all tables (each widget = table)
         tables = page.query_selector_all("table")
 
         print(f"Tables found: {len(tables)}")
@@ -58,13 +67,13 @@ def scrape_chartink_dashboard(url):
             for s in stocks:
                 text = s.inner_text().strip()
 
-                # Filter valid stock symbols
                 if text.isupper() and 2 <= len(text) <= 15:
                     symbols.append(text)
 
             symbols = list(set(symbols))
 
-            if symbols:
+            # Filter weak widgets (optional but recommended)
+            if len(symbols) >= 5:
                 print(f"Widget {i+1}: {len(symbols)} stocks")
                 widget_results.append(symbols)
 
@@ -84,10 +93,7 @@ def get_common_stocks(widget_lists, min_count=2):
     for lst in widget_lists:
         counter.update(lst)
 
-    # Keep stocks appearing in >= min_count widgets
-    common = [stock for stock, count in counter.items() if count >= min_count]
-
-    return common
+    return [stock for stock, count in counter.items() if count >= min_count]
 
 
 # ==========================================
@@ -105,63 +111,31 @@ def rank_stocks(widget_lists):
 # ==========================================
 # OUTPUT ENGINE
 # ==========================================
-from tabulate import tabulate
-
 def save_results(common, ranked):
-    # Filter strong signals
     ranked = [r for r in ranked if r[1] >= 2]
 
     print("\n📊 HIGH CONVICTION STOCKS (>=2 scanners)\n")
 
     if not ranked:
-        print("No strong signals found.")
+        msg = "❌ No strong signals today."
+        print(msg)
+        send_to_telegram(msg)
         return
 
-    # Create DataFrame
     df = pd.DataFrame(ranked, columns=["Stock", "Scanner Count"])
 
-    # Add strength label
     df["Strength"] = df["Scanner Count"].apply(
         lambda x: "🔥 Strong" if x >= 3 else "⚡ Medium"
     )
 
-    # Sort
     df = df.sort_values(by="Scanner Count", ascending=False)
 
-    # Pretty print table
     table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
     print(table)
 
     message = f"📊 *Chartink AI Signals*\n\n```\n{table}\n```"
-    
-    def send_to_telegram(message):
-        BOT_TOKEN = os.getenv("BOT_TOKEN")
-        CHAT_ID = os.getenv("CHAT_ID")
-
-        print("BOT_TOKEN:", BOT_TOKEN)
-        print("CHAT_ID:", CHAT_ID)
-
-        if not BOT_TOKEN or not CHAT_ID:
-            print("❌ Missing Telegram credentials")
-            return
-
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
-
-    response = requests.post(url, data=payload)
-
-    print("Telegram response:", response.text)
-    
-    # Save
-    df.to_csv("filtered_stocks.csv", index=False)
-
-    print("\n✅ Saved: filtered_stocks.csv")
+    send_to_telegram(message)
 
 
 # ==========================================
@@ -171,7 +145,9 @@ def run():
     widget_lists = scrape_chartink_dashboard(DASHBOARD_URL)
 
     if not widget_lists:
-        print("❌ No data extracted.")
+        msg = "❌ No data extracted."
+        print(msg)
+        send_to_telegram(msg)
         return
 
     common = get_common_stocks(widget_lists)
