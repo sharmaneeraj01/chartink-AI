@@ -10,10 +10,12 @@ from tabulate import tabulate
 # CONFIG
 # ==========================================
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
+SCREENER_URL = "https://chartink.com/screener/copy-copy-stock-near-5-of-52-week-high-2543"
 HEADLESS = True
 
+
 # ==========================================
-# TELEGRAM FUNCTION
+# TELEGRAM
 # ==========================================
 def send_to_telegram(message):
     BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -32,128 +34,158 @@ def send_to_telegram(message):
     }
 
     response = requests.post(url, data=payload)
-
     print("Telegram response:", response.text)
 
 
 # ==========================================
-# SCRAPER ENGINE
+# DASHBOARD SCRAPER
 # ==========================================
-def scrape_chartink_dashboard(url):
+def scrape_dashboard(page):
     widget_results = []
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=HEADLESS)
-        page = browser.new_page()
+    print("Opening dashboard...")
+    page.goto(DASHBOARD_URL)
 
-        print("Opening dashboard...")
-        page.goto(url)
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(5000)
 
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(5000)
+    page.mouse.wheel(0, 5000)
+    page.wait_for_timeout(3000)
 
-        # Scroll to load all widgets
-        page.mouse.wheel(0, 5000)
-        page.wait_for_timeout(3000)
+    tables = page.query_selector_all("table")
+    print(f"Tables found: {len(tables)}")
 
-        tables = page.query_selector_all("table")
+    for i, table in enumerate(tables):
+        stocks = table.query_selector_all("a")
 
-        print(f"Tables found: {len(tables)}")
+        symbols = []
+        for s in stocks:
+            text = s.inner_text().strip()
 
-        for i, table in enumerate(tables):
-            stocks = table.query_selector_all("a")
+            if text.isupper() and 2 <= len(text) <= 15:
+                symbols.append(text)
 
-            symbols = []
-            for s in stocks:
-                text = s.inner_text().strip()
+        symbols = list(set(symbols))
 
-                if text.isupper() and 2 <= len(text) <= 15:
-                    symbols.append(text)
+        if len(symbols) >= 5:
+            print(f"Widget {i+1}: {len(symbols)} stocks")
+            widget_results.append(symbols)
 
-            symbols = list(set(symbols))
-
-            # Filter weak widgets (optional but recommended)
-            if len(symbols) >= 5:
-                print(f"Widget {i+1}: {len(symbols)} stocks")
-                widget_results.append(symbols)
-
-        browser.close()
-
-    print(f"\nTotal widgets captured: {len(widget_results)}")
-
+    print(f"Total widgets captured: {len(widget_results)}")
     return widget_results
 
 
 # ==========================================
-# INTERSECTION ENGINE
+# SCREENER SCRAPER
 # ==========================================
-def get_common_stocks(widget_lists, min_count=2):
-    counter = Counter()
+def scrape_screener(page):
+    results = []
 
-    for lst in widget_lists:
-        counter.update(lst)
+    print("Running screener...")
+    page.goto(SCREENER_URL)
 
-    return [stock for stock, count in counter.items() if count >= min_count]
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(5000)
+
+    rows = page.query_selector_all("table tbody tr")
+    print(f"Screener rows: {len(rows)}")
+
+    for row in rows:
+        cols = row.query_selector_all("td")
+
+        if len(cols) < 6:
+            continue
+
+        symbol = cols[2].inner_text().strip()
+        price = cols[3].inner_text().strip()
+        change = cols[4].inner_text().strip()
+
+        volume_text = cols[5].inner_text().strip()
+        volume = int(volume_text.replace(",", "")) if volume_text else 0
+
+        results.append([symbol, price, change, volume])
+
+    # 🔥 SORT BY VOLUME
+    results = sorted(results, key=lambda x: x[3], reverse=True)
+
+    return results
 
 
 # ==========================================
-# RANKING ENGINE
+# RANKING
 # ==========================================
 def rank_stocks(widget_lists):
     counter = Counter()
-
     for lst in widget_lists:
         counter.update(lst)
-
     return counter.most_common()
 
 
 # ==========================================
-# OUTPUT ENGINE
-# ==========================================
-def save_results(common, ranked):
-    ranked = [r for r in ranked if r[1] >= 2]
-
-    print("\n📊 HIGH CONVICTION STOCKS (>=2 scanners)\n")
-
-    if not ranked:
-        msg = "❌ No strong signals today."
-        print(msg)
-        send_to_telegram(msg)
-        return
-
-    df = pd.DataFrame(ranked, columns=["Stock", "Scanner Count"])
-
-    df["Strength"] = df["Scanner Count"].apply(
-        lambda x: "🔥 Strong" if x >= 3 else "⚡ Medium"
-    )
-
-    df = df.sort_values(by="Scanner Count", ascending=False)
-
-    table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
-
-    print(table)
-
-    message = f"📊 *Chartink AI Signals*\n\n```\n{table}\n```"
-    send_to_telegram(message)
-
-
-# ==========================================
-# MAIN PIPELINE
+# MAIN
 # ==========================================
 def run():
-    widget_lists = scrape_chartink_dashboard(DASHBOARD_URL)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=HEADLESS)
+        page = browser.new_page()
 
-    if not widget_lists:
-        msg = "❌ No data extracted."
-        print(msg)
-        send_to_telegram(msg)
-        return
+        # Dashboard
+        widget_lists = scrape_dashboard(page)
 
-    common = get_common_stocks(widget_lists)
-    ranked = rank_stocks(widget_lists)
+        if not widget_lists:
+            msg = "❌ No dashboard data."
+            print(msg)
+            send_to_telegram(msg)
+            return
 
-    save_results(common, ranked)
+        ranked = rank_stocks(widget_lists)
+
+        # Screener
+        screener_results = scrape_screener(page)
+
+        browser.close()
+
+    # =========================
+    # FORMAT DASHBOARD
+    # =========================
+    ranked = [r for r in ranked if r[1] >= 2]
+
+    if ranked:
+        df = pd.DataFrame(ranked, columns=["Stock", "Count"])
+        df["Strength"] = df["Count"].apply(lambda x: "🔥 Strong" if x >= 3 else "⚡ Medium")
+        dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    else:
+        dashboard_table = "No strong signals."
+
+    # =========================
+    # FORMAT SCREENER
+    # =========================
+    if screener_results:
+        screener_table = tabulate(
+            screener_results,
+            headers=["Stock", "Price", "%Change", "Volume"],
+            tablefmt="github"
+        )
+    else:
+        screener_table = "No screener results."
+
+    # =========================
+    # FINAL MESSAGE (SAFE FORMAT)
+    # =========================
+    message = (
+        "📊 *Chartink AI Signals*\n\n"
+        "🔹 Dashboard Signals\n"
+        "```\n"
+        f"{dashboard_table}\n"
+        "```\n\n"
+        "🔹 Screener Output\n"
+        "```\n"
+        f"{screener_table}\n"
+        "```"
+    )
+
+    print(message)
+    send_to_telegram(message)
 
 
 if __name__ == "__main__":
