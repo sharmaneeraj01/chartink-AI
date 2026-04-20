@@ -5,8 +5,8 @@ env:
 
 on:
   schedule:
-    - cron: '0 9 * * *'    # 14:30 IST
-    - cron: '30 15 * * *'  # 21:00 IST
+    - cron: '30 10 * * *'    # 10:30 IST
+    - cron: '0 15 * * *'  # 15:00 IST
   workflow_dispatch:
 
 jobs:
