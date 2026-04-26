@@ -10,7 +10,7 @@ from tabulate import tabulate
 # CONFIG
 # ==========================================
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
-SCREENER_URL = "https://chartink.com/screener/2-week-inside-bar-neer-3"
+SCREENER_URL = "https://chartink.com/screener/2-week-inside-bar-2026"
 HEADLESS = True
 
 
@@ -173,12 +173,12 @@ def run():
     # FINAL MESSAGE (SAFE FORMAT)
     # =========================
     message = (
-        "📊 *Chartink AI Signals*\n\n"
+        "📊 *Stocks for the Day *\n\n"
         "🔹 Dashboard Signals\n"
         "```\n"
         f"{dashboard_table}\n"
         "```\n\n"
-        "🔹 Screener Output\n"
+        "🔹 2 WEEK Inside bar Screener\n"
         "```\n"
         f"{screener_table}\n"
         "```"
