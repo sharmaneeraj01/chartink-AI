@@ -72,7 +72,7 @@ def scrape_dashboard(page):
 
 
 # ==========================================
-# SCREENER SCRAPER (ONLY FOR TAGGING)
+# SCREENER SCRAPER (FULL DATA)
 # ==========================================
 def scrape_screener(page):
     results = []
@@ -92,9 +92,15 @@ def scrape_screener(page):
             continue
 
         symbol = cols[2].inner_text().strip()
-        results.append(symbol)
+        price = cols[3].inner_text().strip()
+        change = cols[4].inner_text().strip()
 
-    return set(results)  # only symbols needed
+        volume_text = cols[5].inner_text().strip()
+        volume = int(volume_text.replace(",", "")) if volume_text else 0
+
+        results.append([symbol, price, change, volume])
+
+    return results
 
 
 # ==========================================
@@ -115,6 +121,7 @@ def run():
         browser = p.chromium.launch(headless=HEADLESS)
         page = browser.new_page()
 
+        # Fetch data
         widget_lists = scrape_dashboard(page)
 
         if not widget_lists:
@@ -123,8 +130,8 @@ def run():
 
         ranked = rank_stocks(widget_lists)
 
-        # Screener only for tagging
-        screener_set = scrape_screener(page)
+        screener_results = scrape_screener(page)
+        screener_set = {s[0] for s in screener_results}
 
         browser.close()
 
@@ -140,12 +147,10 @@ def run():
 
     for stock, count in ranked:
         score = count * 10   # clean scoring
-
         tag = "IB" if stock in screener_set else ""
 
         combined.append((stock, count, score, tag))
 
-    # SORT
     combined = sorted(combined, key=lambda x: x[2], reverse=True)
 
     # =========================
@@ -167,6 +172,15 @@ def run():
     dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
     # =========================
+    # SCREENER TABLE (DISPLAY ONLY)
+    # =========================
+    screener_table = tabulate(
+        screener_results[:20],  # limit for Telegram
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
+    # =========================
     # FINAL MESSAGE
     # =========================
     message = (
@@ -180,6 +194,11 @@ def run():
         "🔹 Dashboard Signals\n"
         "```\n"
         f"{dashboard_table}\n"
+        "```\n\n"
+
+        "🔹 Inside Bar Screener\n"
+        "```\n"
+        f"{screener_table}\n"
         "```"
     )
 
