@@ -108,6 +108,10 @@ def scrape_screener(page):
     # 🔥 SORT BY VOLUME
     results = sorted(results, key=lambda x: x[3], reverse=True)
 
+    # ✅ LIMIT TO TOP 100 STOCKS
+    MAX_STOCKS = 100
+    results = results[:MAX_STOCKS]
+
     return results
 
 
