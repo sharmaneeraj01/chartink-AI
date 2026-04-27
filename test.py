@@ -72,7 +72,7 @@ def scrape_dashboard(page):
 
 
 # ==========================================
-# SCREENER SCRAPER (FULL DATA)
+# SCREENER SCRAPER
 # ==========================================
 def scrape_screener(page):
     results = []
@@ -121,7 +121,6 @@ def run():
         browser = p.chromium.launch(headless=HEADLESS)
         page = browser.new_page()
 
-        # Fetch data
         widget_lists = scrape_dashboard(page)
 
         if not widget_lists:
@@ -138,17 +137,16 @@ def run():
     # =========================
     # FILTER DASHBOARD
     # =========================
-    ranked = [r for r in ranked if r[1] >= 2][:30]
+    ranked = [r for r in ranked if r[1] >= 2][:40]
 
     # =========================
-    # PURE SCORING (NO SCREENER)
+    # PURE SCORING
     # =========================
     combined = []
 
     for stock, count in ranked:
-        score = count * 10   # clean scoring
+        score = count * 10
         tag = "IB" if stock in screener_set else ""
-
         combined.append((stock, count, score, tag))
 
     combined = sorted(combined, key=lambda x: x[2], reverse=True)
@@ -157,6 +155,7 @@ def run():
     # TOP PICKS
     # =========================
     top_picks = combined[:15]
+    top_symbols = {s[0] for s in top_picks}
 
     top_text = "\n".join([
         f"{i+1}. {s[0]} | Score:{s[2]} {s[3]}"
@@ -164,18 +163,20 @@ def run():
     ]) if top_picks else "No strong picks."
 
     # =========================
-    # DASHBOARD TABLE
+    # REMOVE DUPLICATES FROM DASHBOARD
     # =========================
-    df = pd.DataFrame(ranked, columns=["Stock", "Count"])
+    filtered_ranked = [r for r in ranked if r[0] not in top_symbols]
+
+    df = pd.DataFrame(filtered_ranked, columns=["Stock", "Count"])
     df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
     dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
     # =========================
-    # SCREENER TABLE (DISPLAY ONLY)
+    # SCREENER TABLE
     # =========================
     screener_table = tabulate(
-        screener_results[:20],  # limit for Telegram
+        screener_results[:20],
         headers=["Stock", "Price", "%Change", "Volume"],
         tablefmt="github"
     )
@@ -191,7 +192,7 @@ def run():
         f"{top_text}\n"
         "```\n\n"
 
-        "🔹 Dashboard Signals\n"
+        "🔹 Dashboard (Remaining Signals)\n"
         "```\n"
         f"{dashboard_table}\n"
         "```\n\n"
@@ -202,7 +203,7 @@ def run():
         "```"
     )
 
-    # TELEGRAM SAFE LIMIT
+    # Telegram safety
     if len(message) > 4000:
         message = message[:4000]
 
