@@ -72,7 +72,7 @@ def scrape_dashboard(page):
 
 
 # ==========================================
-# SCREENER SCRAPER
+# SCREENER SCRAPER (ONLY FOR TAGGING)
 # ==========================================
 def scrape_screener(page):
     results = []
@@ -92,15 +92,9 @@ def scrape_screener(page):
             continue
 
         symbol = cols[2].inner_text().strip()
-        price = cols[3].inner_text().strip()
-        change = cols[4].inner_text().strip()
+        results.append(symbol)
 
-        volume_text = cols[5].inner_text().strip()
-        volume = int(volume_text.replace(",", "")) if volume_text else 0
-
-        results.append([symbol, price, change, volume])
-
-    return results
+    return set(results)  # only symbols needed
 
 
 # ==========================================
@@ -121,7 +115,6 @@ def run():
         browser = p.chromium.launch(headless=HEADLESS)
         page = browser.new_page()
 
-        # Fetch data
         widget_lists = scrape_dashboard(page)
 
         if not widget_lists:
@@ -129,58 +122,39 @@ def run():
             return
 
         ranked = rank_stocks(widget_lists)
-        screener_results = scrape_screener(page)
+
+        # Screener only for tagging
+        screener_set = scrape_screener(page)
 
         browser.close()
 
     # =========================
     # FILTER DASHBOARD
     # =========================
-    ranked = [r for r in ranked if r[1] >= 2][:60]
+    ranked = [r for r in ranked if r[1] >= 2][:30]
 
     # =========================
-    # CREATE SCREENER DICT
-    # =========================
-    screener_dict = {s[0]: s for s in screener_results}
-
-    # =========================
-    # COMBINED SCORING (NO FILTERING)
+    # PURE SCORING (NO SCREENER)
     # =========================
     combined = []
 
     for stock, count in ranked:
-        screener_data = screener_dict.get(stock, [None, None, "0%", 0])
+        score = count * 10   # clean scoring
 
-        change = screener_data[2]
-        volume = screener_data[3]
+        tag = "IB" if stock in screener_set else ""
 
-        # % change
-        try:
-            change_score = float(change.replace('%', ''))
-        except:
-            change_score = 0
-
-        # volume influence (light weight)
-        vol_score = min(volume / 1_000_000, 10)
-
-        # FINAL SCORE
-        score = (count * 5) + change_score + (vol_score * 0.5)
-
-        # tag if inside-bar screener
-        tag = "IB" if stock in screener_dict else ""
-
-        combined.append((stock, count, change, volume, round(score, 2), tag))
+        combined.append((stock, count, score, tag))
 
     # SORT
-    combined = sorted(combined, key=lambda x: x[4], reverse=True)
+    combined = sorted(combined, key=lambda x: x[2], reverse=True)
 
     # =========================
     # TOP PICKS
     # =========================
-    top_picks = combined[:20]
+    top_picks = combined[:15]
 
     top_text = "\n".join([
-        f"{i+1}. {s[0]} | Score:{s[4]} {s[5]}"
+        f"{i+1}. {s[0]} | Score:{s[2]} {s[3]}"
         for i, s in enumerate(top_picks)
     ]) if top_picks else "No strong picks."
 
@@ -191,15 +165,6 @@ def run():
     df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
     dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
-
-    # =========================
-    # SCREENER TABLE
-    # =========================
-    screener_table = tabulate(
-        screener_results[:20],  # limit display
-        headers=["Stock", "Price", "%Change", "Volume"],
-        tablefmt="github"
-    )
 
     # =========================
     # FINAL MESSAGE
@@ -215,11 +180,6 @@ def run():
         "🔹 Dashboard Signals\n"
         "```\n"
         f"{dashboard_table}\n"
-        "```\n\n"
-
-        "🔹 Screener (Inside Bar)\n"
-        "```\n"
-        f"{screener_table}\n"
         "```"
     )
 
