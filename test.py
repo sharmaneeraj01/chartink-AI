@@ -109,7 +109,7 @@ def scrape_screener(page):
     results = sorted(results, key=lambda x: x[3], reverse=True)
 
     # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 100
+    MAX_STOCKS = 60
     results = results[:MAX_STOCKS]
 
     return results
@@ -154,7 +154,7 @@ def run():
     # =========================
     ranked = [r for r in ranked if r[1] >= 2]
     # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 100
+    MAX_STOCKS = 25
     ranked = ranked[:MAX_STOCKS]
 
     if ranked:
