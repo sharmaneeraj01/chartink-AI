@@ -53,25 +53,21 @@ def scrape_dashboard(page):
     page.wait_for_timeout(3000)
 
     tables = page.query_selector_all("table")
-    print(f"Tables found: {len(tables)}")
 
-    for i, table in enumerate(tables):
+    for table in tables:
         stocks = table.query_selector_all("a")
 
         symbols = []
         for s in stocks:
             text = s.inner_text().strip()
-
             if text.isupper() and 2 <= len(text) <= 15:
                 symbols.append(text)
 
         symbols = list(set(symbols))
 
         if len(symbols) >= 5:
-            print(f"Widget {i+1}: {len(symbols)} stocks")
             widget_results.append(symbols)
 
-    print(f"Total widgets captured: {len(widget_results)}")
     return widget_results
 
 
@@ -88,7 +84,6 @@ def scrape_screener(page):
     page.wait_for_timeout(5000)
 
     rows = page.query_selector_all("table tbody tr")
-    print(f"Screener rows: {len(rows)}")
 
     for row in rows:
         cols = row.query_selector_all("td")
@@ -105,12 +100,8 @@ def scrape_screener(page):
 
         results.append([symbol, price, change, volume])
 
-    # 🔥 SORT BY VOLUME
-    results = sorted(results, key=lambda x: x[3], reverse=True)
-
-    # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 60
-    results = results[:MAX_STOCKS]
+    # ✅ LIMIT (keep moderate)
+    results = results[:60]
 
     return results
 
@@ -133,63 +124,104 @@ def run():
         browser = p.chromium.launch(headless=HEADLESS)
         page = browser.new_page()
 
-        # Dashboard
         widget_lists = scrape_dashboard(page)
 
         if not widget_lists:
-            msg = "❌ No dashboard data."
-            print(msg)
-            send_to_telegram(msg)
+            send_to_telegram("❌ No dashboard data.")
             return
 
         ranked = rank_stocks(widget_lists)
-
-        # Screener
         screener_results = scrape_screener(page)
 
         browser.close()
 
     # =========================
-    # FORMAT DASHBOARD
+    # FILTER DASHBOARD
     # =========================
-    ranked = [r for r in ranked if r[1] >= 2]
-    # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 25
-    ranked = ranked[:MAX_STOCKS]
-
-    if ranked:
-        df = pd.DataFrame(ranked, columns=["Stock", "Count"])
-        df["Strength"] = df["Count"].apply(lambda x: "🔥 Strong" if x >= 3 else "⚡ Medium")
-        dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
-    else:
-        dashboard_table = "No strong signals."
+    ranked = [r for r in ranked if r[1] >= 2][:30]
 
     # =========================
-    # FORMAT SCREENER
+    # CREATE SCREENER DICT
     # =========================
-    if screener_results:
-        screener_table = tabulate(
-            screener_results,
-            headers=["Stock", "Price", "%Change", "Volume"],
-            tablefmt="github"
-        )
-    else:
-        screener_table = "No screener results."
+    screener_dict = {s[0]: s for s in screener_results}
 
     # =========================
-    # FINAL MESSAGE (SAFE FORMAT)
+    # COMBINED SCORING
+    # =========================
+    combined = []
+
+    for stock, count in ranked:
+        if stock in screener_dict:
+            price = screener_dict[stock][1]
+            change = screener_dict[stock][2]
+            volume = screener_dict[stock][3]
+
+            try:
+                change_score = float(change.replace('%', ''))
+            except:
+                change_score = 0
+
+            vol_score = min(volume / 1_000_000, 10)
+
+            score = (count * 5) + change_score + (vol_score * 0.5)
+
+            combined.append((stock, count, change, volume, round(score, 2)))
+
+    # SORT FINAL
+    combined = sorted(combined, key=lambda x: x[4], reverse=True)
+
+    # =========================
+    # TOP PICKS
+    # =========================
+    top_picks = combined[:15]
+
+    top_text = "\n".join([
+        f"{i+1}. {s[0]} | Score:{s[4]} | Vol:{s[3]}"
+        for i, s in enumerate(top_picks)
+    ]) if top_picks else "No strong confluence stocks."
+
+    # =========================
+    # DASHBOARD TABLE
+    # =========================
+    df = pd.DataFrame(ranked, columns=["Stock", "Count"])
+    df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
+
+    dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+
+    # =========================
+    # SCREENER TABLE
+    # =========================
+    screener_table = tabulate(
+        screener_results,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
+    # =========================
+    # FINAL MESSAGE
     # =========================
     message = (
-        "📊 *Stocks for the Day *\n\n"
+        "📊 *Stocks for the Day*\n\n"
+
+        "🔥 *Top Picks (Best Setups)*\n"
+        "```\n"
+        f"{top_text}\n"
+        "```\n\n"
+
         "🔹 Dashboard Signals\n"
         "```\n"
         f"{dashboard_table}\n"
         "```\n\n"
-        "🔹 2 WEEK Inside bar Screener\n"
+
+        "🔹 Screener\n"
         "```\n"
         f"{screener_table}\n"
         "```"
     )
+
+    # SAFETY LIMIT
+    if len(message) > 4000:
+        message = message[:4000]
 
     print(message)
     send_to_telegram(message)
