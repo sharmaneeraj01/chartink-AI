@@ -153,6 +153,9 @@ def run():
     # FORMAT DASHBOARD
     # =========================
     ranked = [r for r in ranked if r[1] >= 2]
+    # ✅ LIMIT TO TOP 100 STOCKS
+    MAX_STOCKS = 100
+    results = results[:MAX_STOCKS]
 
     if ranked:
         df = pd.DataFrame(ranked, columns=["Stock", "Count"])
