@@ -100,9 +100,6 @@ def scrape_screener(page):
 
         results.append([symbol, price, change, volume])
 
-    # ✅ LIMIT (keep moderate)
-    results = results[:60]
-
     return results
 
 
@@ -124,6 +121,7 @@ def run():
         browser = p.chromium.launch(headless=HEADLESS)
         page = browser.new_page()
 
+        # Fetch data
         widget_lists = scrape_dashboard(page)
 
         if not widget_lists:
@@ -138,7 +136,7 @@ def run():
     # =========================
     # FILTER DASHBOARD
     # =========================
-    ranked = [r for r in ranked if r[1] >= 2][:30]
+    ranked = [r for r in ranked if r[1] >= 2][:60]
 
     # =========================
     # CREATE SCREENER DICT
@@ -146,39 +144,45 @@ def run():
     screener_dict = {s[0]: s for s in screener_results}
 
     # =========================
-    # COMBINED SCORING
+    # COMBINED SCORING (NO FILTERING)
     # =========================
     combined = []
 
     for stock, count in ranked:
-        if stock in screener_dict:
-            price = screener_dict[stock][1]
-            change = screener_dict[stock][2]
-            volume = screener_dict[stock][3]
+        screener_data = screener_dict.get(stock, [None, None, "0%", 0])
 
-            try:
-                change_score = float(change.replace('%', ''))
-            except:
-                change_score = 0
+        change = screener_data[2]
+        volume = screener_data[3]
 
-            vol_score = min(volume / 1_000_000, 10)
+        # % change
+        try:
+            change_score = float(change.replace('%', ''))
+        except:
+            change_score = 0
 
-            score = (count * 5) + change_score + (vol_score * 0.5)
+        # volume influence (light weight)
+        vol_score = min(volume / 1_000_000, 10)
 
-            combined.append((stock, count, change, volume, round(score, 2)))
+        # FINAL SCORE
+        score = (count * 5) + change_score + (vol_score * 0.5)
 
-    # SORT FINAL
+        # tag if inside-bar screener
+        tag = "IB" if stock in screener_dict else ""
+
+        combined.append((stock, count, change, volume, round(score, 2), tag))
+
+    # SORT
     combined = sorted(combined, key=lambda x: x[4], reverse=True)
 
     # =========================
     # TOP PICKS
     # =========================
-    top_picks = combined[:15]
+    top_picks = combined[:20]
 
     top_text = "\n".join([
-        f"{i+1}. {s[0]} | Score:{s[4]} | Vol:{s[3]}"
+        f"{i+1}. {s[0]} | Score:{s[4]} {s[5]}"
         for i, s in enumerate(top_picks)
-    ]) if top_picks else "No strong confluence stocks."
+    ]) if top_picks else "No strong picks."
 
     # =========================
     # DASHBOARD TABLE
@@ -192,7 +196,7 @@ def run():
     # SCREENER TABLE
     # =========================
     screener_table = tabulate(
-        screener_results,
+        screener_results[:20],  # limit display
         headers=["Stock", "Price", "%Change", "Volume"],
         tablefmt="github"
     )
@@ -203,7 +207,7 @@ def run():
     message = (
         "📊 *Stocks for the Day*\n\n"
 
-        "🔥 *Top Picks (Best Setups)*\n"
+        "🔥 *Top Picks (Ranked)*\n"
         "```\n"
         f"{top_text}\n"
         "```\n\n"
@@ -213,13 +217,13 @@ def run():
         f"{dashboard_table}\n"
         "```\n\n"
 
-        "🔹 Screener\n"
+        "🔹 Screener (Inside Bar)\n"
         "```\n"
         f"{screener_table}\n"
         "```"
     )
 
-    # SAFETY LIMIT
+    # TELEGRAM SAFE LIMIT
     if len(message) > 4000:
         message = message[:4000]
 
