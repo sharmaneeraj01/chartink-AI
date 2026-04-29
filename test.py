@@ -45,7 +45,7 @@ print("Telegram response:", response.text)
 
 # ==========================================
 
-# HELPERS
+# HELPER (ONLY ADDITION)
 
 # ==========================================
 
@@ -166,16 +166,11 @@ page = browser.new_page()
 
     browser.close()
 
-# =========================
-# FILTER (NO LIMIT HERE)
-# =========================
+# FILTER
 ranked = [r for r in ranked if r[1] >= 2]
 
-# =========================
 # FULL SCORING
-# =========================
 combined = []
-
 for stock, count in ranked:
     score = count * 10
     tag = "IB" if stock in screener_set else ""
@@ -183,9 +178,7 @@ for stock, count in ranked:
 
 combined = sorted(combined, key=lambda x: x[2], reverse=True)
 
-# =========================
 # TOP PICKS
-# =========================
 top_picks = combined[:15]
 top_symbols = {s[0] for s in top_picks}
 
@@ -194,9 +187,7 @@ top_text = "\n".join([
     for i, s in enumerate(top_picks)
 ]) if top_picks else "No strong picks."
 
-# =========================
-# DASHBOARD TABLE
-# =========================
+# DASHBOARD
 remaining = [r for r in ranked if r[0] not in top_symbols][:30]
 
 df = pd.DataFrame(remaining, columns=["Stock", "Count"])
@@ -204,26 +195,22 @@ df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
 dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
-# =========================
+# ==========================================
 # SORT SCREENER (LOW → HIGH PRICE)
-# =========================
+# ==========================================
 screener_results_sorted = sorted(
     screener_results,
     key=lambda x: parse_price(x[1])
 )
 
-# =========================
 # SCREENER TABLE
-# =========================
 screener_table = tabulate(
     screener_results_sorted[:20],
     headers=["Stock", "Price", "%Change", "Volume"],
     tablefmt="github"
 )
 
-# =========================
 # FINAL MESSAGE
-# =========================
 message = (
     "📊 *Stocks for the Day*\n\n"
 
