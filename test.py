@@ -10,7 +10,7 @@ from tabulate import tabulate
 # CONFIG
 # ==========================================
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
-SCREENER_URL = "https://chartink.com/screener/2-week-inside-bar-2026"
+SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
 HEADLESS = True
 
 
