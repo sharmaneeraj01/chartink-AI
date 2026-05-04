@@ -113,7 +113,28 @@ def rank_stocks(widget_lists):
         counter.update(lst)
     return counter.most_common()
 
+# ==========================================
+# SCREENER PRIORITY + PRICE SORT
+# ==========================================
+def prioritize_and_sort_screener(screener_results, top_symbols, limit):
+    def safe_price(row):
+        try:
+            return float(row[1].replace(",", ""))
+        except:
+            return float('inf')
 
+    # Split
+    priority = [row + ["⭐"] for row in screener_results if row[0] in top_symbols]
+    others = [row + [""] for row in screener_results if row[0] not in top_symbols]
+
+    # Sort each group by price (low → high)
+    priority_sorted = sorted(priority, key=safe_price)
+    others_sorted = sorted(others, key=safe_price)
+
+    # Combine
+    final = priority_sorted + others_sorted
+
+    return final[:limit]
 # ==========================================
 # MAIN
 # ==========================================
@@ -167,7 +188,7 @@ def run():
     # =========================
     # TOP PICKS
     # =========================
-    top_picks = combined[:15]
+    top_picks = combined[:5]
     top_symbols = {s[0] for s in top_picks}
 
     top_text = "\n".join([
@@ -186,18 +207,22 @@ def run():
     dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
     # =========================
-    # SCREENER TABLES
+    # SCREENER TABLES (PRIORITIZED + SORTED)
     # =========================
-    ib_table = tabulate(
-        ib_results[:20],
-        headers=["Stock", "Price", "%Change", "Volume"],
-        tablefmt="github"
-    )
 
+    ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 20)
+    ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 15)
+
+    ib_table = tabulate(
+    ib_final,
+    headers=["Stock", "Price", "%Change", "Volume", "Top"],
+    tablefmt="github"
+    )
+    
     ema_table = tabulate(
-        ema_results[:20],
-        headers=["Stock", "Price", "%Change", "Volume"],
-        tablefmt="github"
+    ema_final,
+    headers=["Stock", "Price", "%Change", "Volume", "Top"],
+    tablefmt="github"
     )
 
     # =========================
