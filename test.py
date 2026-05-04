@@ -123,18 +123,15 @@ def prioritize_and_sort_screener(screener_results, top_symbols, limit):
         except:
             return float('inf')
 
-    # Split
-    priority = [row + ["⭐"] for row in screener_results if row[0] in top_symbols]
-    others = [row + [""] for row in screener_results if row[0] not in top_symbols]
+    # NO extra column here
+    priority = [row for row in screener_results if row[0] in top_symbols]
+    others = [row for row in screener_results if row[0] not in top_symbols]
 
-    # Sort each group by price (low → high)
     priority_sorted = sorted(priority, key=safe_price)
     others_sorted = sorted(others, key=safe_price)
 
-    # Combine
-    final = priority_sorted + others_sorted
-
-    return final[:limit]
+    return (priority_sorted + others_sorted)[:limit]
+    
 # ==========================================
 # MAIN
 # ==========================================
@@ -215,13 +212,13 @@ def run():
 
     ib_table = tabulate(
     ib_final,
-    headers=["Stock", "Price", "%Change", "Volume", "Top"],
+    headers=["Stock", "Price", "%Change", "Volume"],
     tablefmt="github"
     )
     
     ema_table = tabulate(
     ema_final,
-    headers=["Stock", "Price", "%Change", "Volume", "Top"],
+    headers=["Stock", "Price", "%Change", "Volume"],
     tablefmt="github"
     )
 
