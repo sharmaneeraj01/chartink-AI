@@ -11,6 +11,7 @@ from tabulate import tabulate
 # ==========================================
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
 SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
+EMA_SCREENER_URL = "https://chartink.com/screener/10-20-ema-reversal-stocks"
 HEADLESS = True
 
 
@@ -72,13 +73,13 @@ def scrape_dashboard(page):
 
 
 # ==========================================
-# SCREENER SCRAPER
+# GENERIC SCREENER SCRAPER
 # ==========================================
-def scrape_screener(page):
+def scrape_chartink_table(page, url):
     results = []
 
-    print("Running screener...")
-    page.goto(SCREENER_URL)
+    print(f"Running screener: {url}")
+    page.goto(url)
 
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(5000)
@@ -129,30 +130,42 @@ def run():
 
         ranked = rank_stocks(widget_lists)
 
-        screener_results = scrape_screener(page)
-        screener_set = {s[0] for s in screener_results}
+        # Fetch BOTH screeners
+        ib_results = scrape_chartink_table(page, SCREENER_URL)
+        ema_results = scrape_chartink_table(page, EMA_SCREENER_URL)
+
+        ib_set = {s[0] for s in ib_results}
+        ema_set = {s[0] for s in ema_results}
 
         browser.close()
 
     # =========================
-    # FILTER (NO LIMIT HERE)
+    # FILTER
     # =========================
     ranked = [r for r in ranked if r[1] >= 2]
 
     # =========================
-    # FULL SCORING
+    # SCORING
     # =========================
     combined = []
 
     for stock, count in ranked:
         score = count * 10
-        tag = "IB" if stock in screener_set else ""
+
+        tags = []
+        if stock in ib_set:
+            tags.append("IB")
+        if stock in ema_set:
+            tags.append("EMA")
+
+        tag = "+".join(tags)
+
         combined.append((stock, count, score, tag))
 
     combined = sorted(combined, key=lambda x: x[2], reverse=True)
 
     # =========================
-    # TOP PICKS (FROM FULL SET)
+    # TOP PICKS
     # =========================
     top_picks = combined[:15]
     top_symbols = {s[0] for s in top_picks}
@@ -163,7 +176,7 @@ def run():
     ]) if top_picks else "No strong picks."
 
     # =========================
-    # DASHBOARD (REMOVE TOP PICKS THEN LIMIT)
+    # DASHBOARD TABLE
     # =========================
     remaining = [r for r in ranked if r[0] not in top_symbols][:30]
 
@@ -173,10 +186,16 @@ def run():
     dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
     # =========================
-    # SCREENER TABLE
+    # SCREENER TABLES
     # =========================
-    screener_table = tabulate(
-        screener_results[:20],
+    ib_table = tabulate(
+        ib_results[:20],
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
+    ema_table = tabulate(
+        ema_results[:20],
         headers=["Stock", "Price", "%Change", "Volume"],
         tablefmt="github"
     )
@@ -199,11 +218,15 @@ def run():
 
         "🔹 Inside Bar Screener\n"
         "```\n"
-        f"{screener_table}\n"
+        f"{ib_table}\n"
+        "```\n\n"
+
+        "🔹 EMA Reversal Screener\n"
+        "```\n"
+        f"{ema_table}\n"
         "```"
     )
 
-    # TELEGRAM SAFETY
     if len(message) > 4000:
         message = message[:4000]
 
