@@ -243,7 +243,7 @@ def run():
         f"{ib_table}\n"
         "```\n\n"
 
-        "🔹 EMA Reversal Screener\n"
+        "🔹 10/21 EMA Reversal Screener\n"
         "```\n"
         f"{ema_table}\n"
         "```"
