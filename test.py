@@ -124,7 +124,7 @@ def prioritize_and_sort_screener(screener_results, top_symbols, limit):
         try:
             return float(row[1].replace(",", ""))
         except:
-            return float('inf')
+            return float("inf")
 
     priority = [row for row in screener_results if row[0] in top_symbols]
     others = [row for row in screener_results if row[0] not in top_symbols]
@@ -221,7 +221,6 @@ def run():
     ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 10)
     cons_final = prioritize_and_sort_screener(consolidation_results, top_symbols, 10)
     ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 10)
-    
 
     ib_table = tabulate(
         ib_final,
@@ -229,7 +228,7 @@ def run():
         tablefmt="github"
     )
 
-        cons_table = tabulate(
+    cons_table = tabulate(
         cons_final,
         headers=["Stock", "Price", "%Change", "Volume"],
         tablefmt="github"
@@ -240,8 +239,6 @@ def run():
         headers=["Stock", "Price", "%Change", "Volume"],
         tablefmt="github"
     )
-
-
 
     # =========================
     # FINAL MESSAGE
@@ -263,17 +260,16 @@ def run():
         "```\n"
         f"{ib_table}\n"
         "```\n\n"
-        "🔹⚡⚡Long Consolidation\n"
+
+        "🔹⚡⚡ Long Consolidation\n"
         "```\n"
         f"{cons_table}\n"
-        "```"
+        "```\n\n"
 
         "🔹 10/21 EMA Reversal\n"
         "```\n"
         f"{ema_table}\n"
-        "```\n\n"
-
-
+        "```"
     )
 
     if len(message) > 4000:
