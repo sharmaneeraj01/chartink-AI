@@ -10,7 +10,7 @@ from tabulate import tabulate
 # CONFIG
 # ==========================================
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
-SCREENER_URL = "https://chartink.com/screener/2-week-inside-bar-2026"
+SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
 HEADLESS = True
 
 
@@ -108,8 +108,8 @@ def scrape_screener(page):
     # 🔥 SORT BY VOLUME
     results = sorted(results, key=lambda x: x[3], reverse=True)
 
-    # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 60
+    # ✅ LIMIT TO TOP 30 STOCKS
+    MAX_STOCKS = 30
     results = results[:MAX_STOCKS]
 
     return results
@@ -153,8 +153,8 @@ def run():
     # FORMAT DASHBOARD
     # =========================
     ranked = [r for r in ranked if r[1] >= 2]
-    # ✅ LIMIT TO TOP 100 STOCKS
-    MAX_STOCKS = 20
+    # ✅ LIMIT TO TOP 15 STOCKS
+    MAX_STOCKS = 15
     ranked = ranked[:MAX_STOCKS]
 
     if ranked:
