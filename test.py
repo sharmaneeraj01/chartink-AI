@@ -16,7 +16,7 @@ def send_to_telegram(message):
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     CHAT_ID = os.getenv("CHAT_ID")
 
-```
+
 if not BOT_TOKEN or not CHAT_ID:
     print("❌ Missing Telegram credentials")
     return
@@ -36,7 +36,7 @@ print("Telegram response:", response.text)
 def scrape_dashboard(page):
 widget_results = []
 
-```
+
 print("Opening dashboard...")
 page.goto(DASHBOARD_URL)
 
@@ -63,12 +63,12 @@ for table in tables:
         widget_results.append(symbols)
 
 return widget_results
-```
+
 
 def scrape_chartink_table(page, url):
 results = []
 
-```
+
 print(f"Running screener: {url}")
 page.goto(url)
 
@@ -93,17 +93,17 @@ for row in rows:
     results.append([symbol, price, change, volume])
 
 return results
-```
+
 
 def rank_stocks(widget_lists):
 counter = Counter()
 
-```
+
 for lst in widget_lists:
     counter.update(lst)
 
 return counter.most_common()
-```
+
 
 def prioritize_and_sort_screener(screener_results, top_symbols, limit):
 def safe_price(row):
@@ -112,7 +112,7 @@ return float(row[1].replace(",", ""))
 except:
 return float("inf")
 
-```
+
 priority = [row for row in screener_results if row[0] in top_symbols]
 others = [row for row in screener_results if row[0] not in top_symbols]
 
@@ -120,7 +120,7 @@ priority_sorted = sorted(priority, key=safe_price)
 others_sorted = sorted(others, key=safe_price)
 
 return (priority_sorted + others_sorted)[:limit]
-```
+
 
 def sort_screener_by_price(screener_results, limit):
 def safe_price(row):
@@ -129,16 +129,16 @@ return float(row[1].replace(",", ""))
 except:
 return float("inf")
 
-```
+
 return sorted(screener_results, key=safe_price)[:limit]
-```
+
 
 def run():
 with sync_playwright() as p:
 browser = p.chromium.launch(headless=HEADLESS)
 page = browser.new_page()
 
-````
+
     widget_lists = scrape_dashboard(page)
 
     if not widget_lists:
@@ -232,7 +232,7 @@ if len(message) > 4000:
 
 print(message)
 send_to_telegram(message)
-````
+
 
 if **name** == "**main**":
 run()
