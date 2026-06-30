@@ -1,3 +1,4 @@
+````python
 import time
 from collections import Counter
 import pandas as pd
@@ -12,6 +13,7 @@ from tabulate import tabulate
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
 SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
 EMA_SCREENER_URL = "https://chartink.com/screener/10-20-ema-reversal-stocks"
+CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consolidation-25-range"
 HEADLESS = True
 
 
@@ -113,6 +115,7 @@ def rank_stocks(widget_lists):
         counter.update(lst)
     return counter.most_common()
 
+
 # ==========================================
 # SCREENER PRIORITY + PRICE SORT
 # ==========================================
@@ -123,7 +126,6 @@ def prioritize_and_sort_screener(screener_results, top_symbols, limit):
         except:
             return float('inf')
 
-    # NO extra column here
     priority = [row for row in screener_results if row[0] in top_symbols]
     others = [row for row in screener_results if row[0] not in top_symbols]
 
@@ -131,7 +133,8 @@ def prioritize_and_sort_screener(screener_results, top_symbols, limit):
     others_sorted = sorted(others, key=safe_price)
 
     return (priority_sorted + others_sorted)[:limit]
-    
+
+
 # ==========================================
 # MAIN
 # ==========================================
@@ -148,12 +151,14 @@ def run():
 
         ranked = rank_stocks(widget_lists)
 
-        # Fetch BOTH screeners
+        # Fetch all THREE screeners
         ib_results = scrape_chartink_table(page, SCREENER_URL)
         ema_results = scrape_chartink_table(page, EMA_SCREENER_URL)
+        consolidation_results = scrape_chartink_table(page, CONSOLIDATION_SCREENER_URL)
 
         ib_set = {s[0] for s in ib_results}
         ema_set = {s[0] for s in ema_results}
+        consolidation_set = {s[0] for s in consolidation_results}
 
         browser.close()
 
@@ -175,6 +180,8 @@ def run():
             tags.append("IB")
         if stock in ema_set:
             tags.append("EMA")
+        if stock in consolidation_set:
+            tags.append("CONS")
 
         tag = "+".join(tags)
 
@@ -196,31 +203,45 @@ def run():
     # =========================
     # DASHBOARD TABLE
     # =========================
-    remaining = [r for r in ranked if r[0] not in top_symbols][:30]
+    remaining = [r for r in ranked if r[0] not in top_symbols][:5]
 
     df = pd.DataFrame(remaining, columns=["Stock", "Count"])
     df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
-    dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    dashboard_table = tabulate(
+        df,
+        headers="keys",
+        tablefmt="github",
+        showindex=False
+    )
 
     # =========================
-    # SCREENER TABLES (PRIORITIZED + SORTED)
+    # SEPARATE SCREENER TABLES
     # =========================
-
-    ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 20)
-    ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 15)
+    ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 10)
+    cons_final = prioritize_and_sort_screener(consolidation_results, top_symbols, 10)
+    ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 10)
+    
 
     ib_table = tabulate(
-    ib_final,
-    headers=["Stock", "Price", "%Change", "Volume"],
-    tablefmt="github"
+        ib_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
     )
-    
+
+        cons_table = tabulate(
+        cons_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
     ema_table = tabulate(
-    ema_final,
-    headers=["Stock", "Price", "%Change", "Volume"],
-    tablefmt="github"
+        ema_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
     )
+
+
 
     # =========================
     # FINAL MESSAGE
@@ -238,15 +259,21 @@ def run():
         f"{dashboard_table}\n"
         "```\n\n"
 
-        "🔹 Inside Bar Screener\n"
+        "🔹⚡ Weekly Inside Bar\n"
         "```\n"
         f"{ib_table}\n"
         "```\n\n"
+        "🔹⚡⚡Long Consolidation\n"
+        "```\n"
+        f"{cons_table}\n"
+        "```"
 
-        "🔹 10/21 EMA Reversal Screener\n"
+        "🔹 10/21 EMA Reversal\n"
         "```\n"
         f"{ema_table}\n"
-        "```"
+        "```\n\n"
+
+
     )
 
     if len(message) > 4000:
@@ -258,3 +285,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+````
