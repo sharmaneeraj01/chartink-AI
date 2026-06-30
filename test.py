@@ -6,23 +6,11 @@ import os
 import requests
 from tabulate import tabulate
 
-# ==========================================
-
-# CONFIG
-
-# ==========================================
-
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
 SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
 EMA_SCREENER_URL = "https://chartink.com/screener/10-20-ema-reversal-stocks"
 CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consolidation-25-range"
 HEADLESS = True
-
-# ==========================================
-
-# TELEGRAM
-
-# ==========================================
 
 def send_to_telegram(message):
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -45,12 +33,6 @@ response = requests.post(url, data=payload)
 print("Telegram response:", response.text)
 ```
 
-# ==========================================
-
-# DASHBOARD SCRAPER
-
-# ==========================================
-
 def scrape_dashboard(page):
 widget_results = []
 
@@ -68,8 +50,8 @@ tables = page.query_selector_all("table")
 
 for table in tables:
     stocks = table.query_selector_all("a")
-
     symbols = []
+
     for s in stocks:
         text = s.inner_text().strip()
         if text.isupper() and 2 <= len(text) <= 15:
@@ -82,12 +64,6 @@ for table in tables:
 
 return widget_results
 ```
-
-# ==========================================
-
-# GENERIC SCREENER SCRAPER
-
-# ==========================================
 
 def scrape_chartink_table(page, url):
 results = []
@@ -119,23 +95,15 @@ for row in rows:
 return results
 ```
 
-# ==========================================
-
-# RANKING
-
-# ==========================================
-
 def rank_stocks(widget_lists):
 counter = Counter()
+
+```
 for lst in widget_lists:
-counter.update(lst)
+    counter.update(lst)
+
 return counter.most_common()
-
-# ==========================================
-
-# PRIORITY + SORT
-
-# ==========================================
+```
 
 def prioritize_and_sort_screener(screener_results, top_symbols, limit):
 def safe_price(row):
@@ -154,12 +122,6 @@ others_sorted = sorted(others, key=safe_price)
 return (priority_sorted + others_sorted)[:limit]
 ```
 
-# ==========================================
-
-# PURE PRICE SORT (FOR CONSOLIDATION)
-
-# ==========================================
-
 def sort_screener_by_price(screener_results, limit):
 def safe_price(row):
 try:
@@ -170,12 +132,6 @@ return float("inf")
 ```
 return sorted(screener_results, key=safe_price)[:limit]
 ```
-
-# ==========================================
-
-# MAIN
-
-# ==========================================
 
 def run():
 with sync_playwright() as p:
@@ -201,16 +157,14 @@ page = browser.new_page()
 
     browser.close()
 
-# FILTER
 ranked = [r for r in ranked if r[1] >= 2]
 
-# SCORING
 combined = []
 
 for stock, count in ranked:
     score = count * 10
-
     tags = []
+
     if stock in ib_set:
         tags.append("IB")
     if stock in ema_set:
@@ -218,13 +172,10 @@ for stock, count in ranked:
     if stock in consolidation_set:
         tags.append("CONS")
 
-    tag = "+".join(tags)
-
-    combined.append((stock, count, score, tag))
+    combined.append((stock, count, score, "+".join(tags)))
 
 combined = sorted(combined, key=lambda x: x[2], reverse=True)
 
-# TOP PICKS
 top_picks = combined[:5]
 top_symbols = {s[0] for s in top_picks}
 
@@ -233,48 +184,23 @@ top_text = "\n".join([
     for i, s in enumerate(top_picks)
 ]) if top_picks else "No strong picks."
 
-# DASHBOARD TABLE
 remaining = [r for r in ranked if r[0] not in top_symbols][:5]
 
 df = pd.DataFrame(remaining, columns=["Stock", "Count"])
 df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
-dashboard_table = tabulate(
-    df,
-    headers="keys",
-    tablefmt="github",
-    showindex=False
-)
+dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
 
-# SCREENER TABLES
 ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 10)
 ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 10)
-
-# Consolidation = pure low to high
 cons_final = sort_screener_by_price(consolidation_results, 10)
 
-ib_table = tabulate(
-    ib_final,
-    headers=["Stock", "Price", "%Change", "Volume"],
-    tablefmt="github"
-)
+ib_table = tabulate(ib_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
+cons_table = tabulate(cons_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
+ema_table = tabulate(ema_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
 
-cons_table = tabulate(
-    cons_final,
-    headers=["Stock", "Price", "%Change", "Volume"],
-    tablefmt="github"
-)
-
-ema_table = tabulate(
-    ema_final,
-    headers=["Stock", "Price", "%Change", "Volume"],
-    tablefmt="github"
-)
-
-# FINAL MESSAGE
 message = (
     "📊 *Stocks for the Day*\n\n"
-
     "🔥 *Top Picks (Ranked)*\n"
     "```\n"
     f"{top_text}\n"
