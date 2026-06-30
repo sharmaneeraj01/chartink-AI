@@ -13,8 +13,8 @@ CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consol
 HEADLESS = True
 
 def send_to_telegram(message):
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    CHAT_ID = os.getenv("CHAT_ID")
 
 ```
 if not BOT_TOKEN or not CHAT_ID:
