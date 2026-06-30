@@ -1,17 +1,21 @@
-import time from collections import Counter import pandas as pd from
-playwright.sync_api import sync_playwright import os import requests
+import time
+from collections import Counter
+import pandas as pd
+from playwright.sync_api import sync_playwright
+import os
+import requests
 from tabulate import tabulate
 
-DASHBOARD_URL = “https://chartink.com/dashboard/334725” SCREENER_URL =
-“https://chartink.com/screener/2-3-4-week-insidebar-2026”
-EMA_SCREENER_URL =
-“https://chartink.com/screener/10-20-ema-reversal-stocks”
-CONSOLIDATION_SCREENER_URL =
-“https://chartink.com/screener/250-375-400-d-consolidation-25-range”
+DASHBOARD_URL = "https://chartink.com/dashboard/334725"
+SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
+EMA_SCREENER_URL = "https://chartink.com/screener/10-20-ema-reversal-stocks"
+CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consolidation-25-range"
 HEADLESS = True
 
-def send_to_telegram(message): BOT_TOKEN = os.getenv(“BOT_TOKEN”)
-CHAT_ID = os.getenv(“CHAT_ID”)
+
+def send_to_telegram(message):
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    CHAT_ID = os.getenv("CHAT_ID")
 
     if not BOT_TOKEN or not CHAT_ID:
         print("Missing Telegram credentials")
@@ -28,7 +32,9 @@ CHAT_ID = os.getenv(“CHAT_ID”)
     response = requests.post(url, data=payload)
     print("Telegram response:", response.text)
 
-def scrape_dashboard(page): widget_results = []
+
+def scrape_dashboard(page):
+    widget_results = []
 
     print("Opening dashboard...")
     page.goto(DASHBOARD_URL)
@@ -47,6 +53,7 @@ def scrape_dashboard(page): widget_results = []
 
         for s in stocks:
             text = s.inner_text().strip()
+
             if text.isupper() and 2 <= len(text) <= 15:
                 symbols.append(text)
 
@@ -57,7 +64,9 @@ def scrape_dashboard(page): widget_results = []
 
     return widget_results
 
-def scrape_chartink_table(page, url): results = []
+
+def scrape_chartink_table(page, url):
+    results = []
 
     print(f"Running screener: {url}")
     page.goto(url)
@@ -78,39 +87,64 @@ def scrape_chartink_table(page, url): results = []
         change = cols[4].inner_text().strip()
 
         volume_text = cols[5].inner_text().strip()
-        volume = int(volume_text.replace(",", "")) if volume_text else 0
+
+        if volume_text:
+            volume = int(volume_text.replace(",", ""))
+        else:
+            volume = 0
 
         results.append([symbol, price, change, volume])
 
     return results
 
-def rank_stocks(widget_lists): counter = Counter()
+
+def rank_stocks(widget_lists):
+    counter = Counter()
 
     for lst in widget_lists:
         counter.update(lst)
 
     return counter.most_common()
 
-def prioritize_and_sort_screener(screener_results, top_symbols, limit):
-def safe_price(row): try: return float(row[1].replace(“,”, ““)) except:
-return float(”inf”)
 
-    priority = [row for row in screener_results if row[0] in top_symbols]
-    others = [row for row in screener_results if row[0] not in top_symbols]
+def prioritize_and_sort_screener(screener_results, top_symbols, limit):
+
+    def safe_price(row):
+        try:
+            return float(row[1].replace(",", ""))
+        except:
+            return float("inf")
+
+    priority = []
+    others = []
+
+    for row in screener_results:
+        if row[0] in top_symbols:
+            priority.append(row)
+        else:
+            others.append(row)
 
     priority_sorted = sorted(priority, key=safe_price)
     others_sorted = sorted(others, key=safe_price)
 
     return (priority_sorted + others_sorted)[:limit]
 
-def sort_screener_by_price(screener_results, limit): def
-safe_price(row): try: return float(row[1].replace(“,”, ““)) except:
-return float(”inf”)
+
+def sort_screener_by_price(screener_results, limit):
+
+    def safe_price(row):
+        try:
+            return float(row[1].replace(",", ""))
+        except:
+            return float("inf")
 
     return sorted(screener_results, key=safe_price)[:limit]
 
-def run(): with sync_playwright() as p: browser =
-p.chromium.launch(headless=HEADLESS) page = browser.new_page()
+
+def run():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=HEADLESS)
+        page = browser.new_page()
 
         widget_lists = scrape_dashboard(page)
 
@@ -140,8 +174,10 @@ p.chromium.launch(headless=HEADLESS) page = browser.new_page()
 
         if stock in ib_set:
             tags.append("IB")
+
         if stock in ema_set:
             tags.append("EMA")
+
         if stock in consolidation_set:
             tags.append("CONS")
 
@@ -152,25 +188,46 @@ p.chromium.launch(headless=HEADLESS) page = browser.new_page()
     top_picks = combined[:5]
     top_symbols = {s[0] for s in top_picks}
 
-    top_text = "\n".join([
-        f"{i+1}. {s[0]} | Score:{s[2]} {s[3]}"
-        for i, s in enumerate(top_picks)
-    ]) if top_picks else "No strong picks."
+    if top_picks:
+        top_text = "\n".join(
+            [f"{i+1}. {s[0]} | Score:{s[2]} {s[3]}" for i, s in enumerate(top_picks)]
+        )
+    else:
+        top_text = "No strong picks."
 
     remaining = [r for r in ranked if r[0] not in top_symbols][:5]
 
     df = pd.DataFrame(remaining, columns=["Stock", "Count"])
     df["Strength"] = df["Count"].apply(lambda x: "🔥" if x >= 3 else "⚡")
 
-    dashboard_table = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    dashboard_table = tabulate(
+        df,
+        headers="keys",
+        tablefmt="github",
+        showindex=False
+    )
 
     ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 10)
     ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 10)
     cons_final = sort_screener_by_price(consolidation_results, 10)
 
-    ib_table = tabulate(ib_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
-    cons_table = tabulate(cons_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
-    ema_table = tabulate(ema_final, headers=["Stock", "Price", "%Change", "Volume"], tablefmt="github")
+    ib_table = tabulate(
+        ib_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
+    cons_table = tabulate(
+        cons_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
+
+    ema_table = tabulate(
+        ema_final,
+        headers=["Stock", "Price", "%Change", "Volume"],
+        tablefmt="github"
+    )
 
     message = (
         "Stocks for the Day\n\n"
@@ -192,4 +249,6 @@ p.chromium.launch(headless=HEADLESS) page = browser.new_page()
     print(message)
     send_to_telegram(message)
 
-if name == “main”: run()
+
+if __name__ == "__main__":
+    run()
