@@ -240,12 +240,12 @@ def run():
         f"{dashboard_table}\n"
         "```\n\n"
 
-        "*Weekly Inside Bar*\n"
+        "*⚡Weekly Inside Bar*\n"
         "```\n"
         f"{ib_table}\n"
         "```\n\n"
 
-        "*Long Consolidation (Low to High)*\n"
+        "*⚡⚡Long Consolidation*\n"
         "```\n"
         f"{cons_table}\n"
         "```\n\n"
