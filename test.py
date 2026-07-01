@@ -230,17 +230,30 @@ def run():
     )
 
     message = (
-        "Stocks for the Day\n\n"
-        "Top Picks (Ranked)\n"
+        "📊 *Stocks for the Day*\n\n"
+
+        "*Top Picks (Ranked)*\n"
         f"{top_text}\n\n"
-        "Dashboard (Remaining Signals)\n"
-        f"{dashboard_table}\n\n"
-        "Weekly Inside Bar\n"
-        f"{ib_table}\n\n"
-        "Long Consolidation (Low to High)\n"
-        f"{cons_table}\n\n"
-        "10/21 EMA Reversal\n"
-        f"{ema_table}"
+
+        "*Dashboard (Remaining Signals)*\n"
+        "```\n"
+        f"{dashboard_table}\n"
+        "```\n\n"
+
+        "*Weekly Inside Bar*\n"
+        "```\n"
+        f"{ib_table}\n"
+        "```\n\n"
+
+        "*Long Consolidation (Low to High)*\n"
+        "```\n"
+        f"{cons_table}\n"
+        "```\n\n"
+
+        "*10/21 EMA Reversal*\n"
+        "```\n"
+        f"{ema_table}\n"
+        "```"
     )
 
     if len(message) > 4000:
