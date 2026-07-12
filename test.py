@@ -13,7 +13,7 @@ CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consol
 HEADLESS = True
 
 
-def send_to_telegram(message):
+def send_to_telegram(message, file_path=None):
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     CHAT_ID = os.getenv("CHAT_ID")
 
@@ -21,15 +21,33 @@ def send_to_telegram(message):
         print("Missing Telegram credentials")
         return
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    if file_path:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
 
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
+        with open(file_path, "rb") as file:
+            response = requests.post(
+                url,
+                data={
+                    "chat_id": CHAT_ID,
+                    "caption": message,
+                    "parse_mode": "Markdown"
+                },
+                files={
+                    "document": file
+                }
+            )
+    else:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    response = requests.post(url, data=payload)
+        response = requests.post(
+            url,
+            data={
+                "chat_id": CHAT_ID,
+                "text": message,
+                "parse_mode": "Markdown"
+            }
+        )
+
     print("Telegram response:", response.text)
 
 
@@ -229,6 +247,23 @@ def run():
         tablefmt="github"
     )
 
+    watchlist = []
+
+    watchlist.extend([s[0] for s in top_picks])
+    watchlist.extend(df["Stock"].tolist())
+    watchlist.extend([r[0] for r in ib_final])
+    watchlist.extend([r[0] for r in cons_final])
+    watchlist.extend([r[0] for r in ema_final])
+
+    # Remove duplicates while preserving order
+    watchlist = list(dict.fromkeys(watchlist))
+
+    txt_filename = "watchlist.txt"
+
+    with open(txt_filename, "w") as f:
+        for stock in watchlist:
+            f.write(stock + "\n")
+
     message = (
         "📊 *Stocks for the Day*\n\n"
 
@@ -260,7 +295,7 @@ def run():
         message = message[:4000]
 
     print(message)
-    send_to_telegram(message)
+    send_to_telegram(message, txt_filename)
 
 
 if __name__ == "__main__":
