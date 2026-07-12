@@ -21,6 +21,21 @@ def send_to_telegram(message, file_path=None):
         print("Missing Telegram credentials")
         return
 
+    # Send the text message
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    response = requests.post(
+        url,
+        data={
+            "chat_id": CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"
+        }
+    )
+
+    print("Message:", response.text)
+
+    # Send the txt file
     if file_path:
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
 
@@ -28,27 +43,14 @@ def send_to_telegram(message, file_path=None):
             response = requests.post(
                 url,
                 data={
-                    "chat_id": CHAT_ID,
-                    "caption": message,
-                    "parse_mode": "Markdown"
+                    "chat_id": CHAT_ID
                 },
                 files={
                     "document": file
                 }
             )
-    else:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-        response = requests.post(
-            url,
-            data={
-                "chat_id": CHAT_ID,
-                "text": message,
-                "parse_mode": "Markdown"
-            }
-        )
-
-    print("Telegram response:", response.text)
+        print("Document:", response.text)
 
 
 def scrape_dashboard(page):
@@ -290,13 +292,7 @@ def run():
         f"{ema_table}\n"
         "```"
     )
-
-    MAX_CAPTION = 1024
-
-    if len(message) > MAX_CAPTION:
-        message = message[:MAX_CAPTION]
-        
-
+    
     print(message)
     send_to_telegram(message, txt_filename)
 
