@@ -291,8 +291,11 @@ def run():
         "```"
     )
 
-    if len(message) > 4000:
-        message = message[:4000]
+    MAX_CAPTION = 1024
+
+    if len(message) > MAX_CAPTION:
+        message = message[:MAX_CAPTION]
+        
 
     print(message)
     send_to_telegram(message, txt_filename)
