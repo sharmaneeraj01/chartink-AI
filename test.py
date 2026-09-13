@@ -7,9 +7,9 @@ import requests
 from tabulate import tabulate
 
 DASHBOARD_URL = "https://chartink.com/dashboard/334725"
-SCREENER_URL = "https://chartink.com/screener/2-3-4-week-insidebar-2026"
-EMA_SCREENER_URL = "https://chartink.com/screener/10-20-ema-reversal-stocks"
-CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/250-375-400-d-consolidation-25-range"
+SCREENER_URL = "https://chartink.com/screener/close-above-supertrend-and-near-52-weeek-low-stock"
+EMA_SCREENER_URL = "https://chartink.com/screener/vivek-equity-5-pre-breakout"
+CONSOLIDATION_SCREENER_URL = "https://chartink.com/screener/supertrend-contraction-momentum-entry-above-swing-high-of-latest-green-zone-supertrend"
 HEADLESS = True
 
 
@@ -277,17 +277,17 @@ def run():
         f"{dashboard_table}\n"
         "```\n\n"
 
-        "*⚡Weekly Inside Bar*\n"
+        "*⚡Close above Supertrend & near 52W low *\n"
         "```\n"
         f"{ib_table}\n"
         "```\n\n"
 
-        "*⚡⚡Long Consolidation*\n"
+        "*⚡⚡5% Pre-Breakout *\n"
         "```\n"
         f"{cons_table}\n"
         "```\n\n"
 
-        "*10/21 EMA Reversal*\n"
+        "*Supertrend Contraction Swing High Breakout wait*\n"
         "```\n"
         f"{ema_table}\n"
         "```"
