@@ -228,8 +228,8 @@ def run():
     )
 
     ib_final = prioritize_and_sort_screener(ib_results, top_symbols, 10)
-    ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 10)
-    cons_final = sort_screener_by_price(consolidation_results, 10)
+    ema_final = prioritize_and_sort_screener(ema_results, top_symbols, 15)
+    cons_final = sort_screener_by_price(consolidation_results, 15)
 
     ib_table = tabulate(
         ib_final,
@@ -282,12 +282,12 @@ def run():
         f"{ib_table}\n"
         "```\n\n"
 
-        "*⚡⚡5% Pre-Breakout *\n"
+        "*⚡⚡Supertrend Contraction Swing High Breakout wait *\n"
         "```\n"
         f"{cons_table}\n"
         "```\n\n"
 
-        "*Supertrend Contraction Swing High Breakout wait*\n"
+        "* ⚡⚡⚡5% Pre-Breakout*\n"
         "```\n"
         f"{ema_table}\n"
         "```"
