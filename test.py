@@ -65,6 +65,8 @@ NEAR_HIGH_CONSOLIDATION_URL = (
 # ============================================================
 
 IB_HISTORY_FILE = "ib_5day_history.json"
+
+# TradingView-compatible watchlist
 WATCHLIST_FILE = "watchlist.txt"
 
 # Keep latest 5 generated trading-day IB lists
@@ -280,7 +282,6 @@ def update_ib_history(
     )
 
     # --------------------------------------------------------
-    # IMPORTANT:
     # Remove today's existing entry first.
     #
     # Therefore running the script twice on the same day
@@ -403,7 +404,6 @@ def load_page(
 
     try:
 
-        # IMPORTANT:
         # Do NOT use networkidle.
         # Chartink can keep network activity alive.
         page.goto(
@@ -441,11 +441,8 @@ def scrape_dashboard(
         DASHBOARD_URL
     )
 
-    # --------------------------------------------------------
     # One controlled scroll.
     # NO LOOP.
-    # --------------------------------------------------------
-
     page.mouse.wheel(
         0,
         4000
@@ -489,7 +486,6 @@ def scrape_dashboard(
 
                 continue
 
-            # Basic symbol check
             if (
                 2 <= len(symbol) <= 15
                 and symbol.isupper()
@@ -820,7 +816,23 @@ def build_ib_cons_watch(
 
 
 # ============================================================
-# CREATE WATCHLIST.TXT
+# CREATE TRADINGVIEW WATCHLIST.TXT
+#
+# IMPORTANT:
+# This file contains ONLY stock symbols.
+#
+# One symbol per line.
+#
+# No:
+# - headings
+# - prices
+# - volume
+# - scores
+# - separators
+# - emojis
+# - Markdown
+#
+# This makes the file directly suitable for TradingView.
 # ============================================================
 
 def create_watchlist_file(
@@ -833,219 +845,107 @@ def create_watchlist_file(
     near_high_results
 ):
 
+    # --------------------------------------------------------
+    # Collect symbols from ALL screening sources
+    # --------------------------------------------------------
+
+    symbols = set()
+
+    # Top dashboard picks
+    for row in top_picks:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # Remaining dashboard signals
+    for row in remaining:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # IB
+    for row in ib_results:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # IB → CONS
+    for row in ib_cons_watch:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # CONS
+    for row in consolidation_results:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # EMA
+    for row in ema_results:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # NH-CONS
+    for row in near_high_results:
+
+        if row and row[0]:
+
+            symbols.add(
+                row[0].strip().upper()
+            )
+
+    # --------------------------------------------------------
+    # Sort alphabetically for a clean TradingView file
+    # --------------------------------------------------------
+
+    symbols = sorted(
+        symbols
+    )
+
+    # --------------------------------------------------------
+    # Write ONLY symbols
+    # --------------------------------------------------------
+
     with open(
         WATCHLIST_FILE,
         "w",
         encoding="utf-8"
     ) as f:
 
-        # ----------------------------------------------------
-        # TOP PICKS
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "TOP PICKS\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for stock, count, score, tags in top_picks:
-
-            line = (
-                f"{stock} | "
-                f"Score:{score}"
-            )
-
-            if tags:
-
-                line += (
-                    f" | {tags}"
-                )
+        for symbol in symbols:
 
             f.write(
-                line + "\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # DASHBOARD REMAINING
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "DASHBOARD REMAINING SIGNALS\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for stock, count in remaining:
-
-            f.write(
-                f"{stock} | Count:{count}\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # IB
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "IB - CLOSE ABOVE SUPERTREND & NEAR 52W LOW\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for row in ib_results:
-
-            f.write(
-                f"{row[0]} | "
-                f"Price:{row[1]} | "
-                f"Change:{row[2]} | "
-                f"Volume:{row[3]}\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # IB → CONS WATCH
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "🔥 IB → CONS WATCH\n"
-        )
-
-        f.write(
-            "IB during last 5 trading days + CONS today\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        if ib_cons_watch:
-
-            for row in ib_cons_watch:
-
-                f.write(
-                    f"{row[0]} | "
-                    f"Price:{row[1]} | "
-                    f"Change:{row[2]} | "
-                    f"Volume:{row[3]} | "
-                    f"IB:{row[4]}\n"
-                )
-
-        else:
-
-            f.write(
-                "No IB → CONS stocks today.\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # CONS
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "CONS - SUPERTREND CONTRACTION\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for row in consolidation_results:
-
-            f.write(
-                f"{row[0]} | "
-                f"Price:{row[1]} | "
-                f"Change:{row[2]} | "
-                f"Volume:{row[3]}\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # EMA
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "5% PRE-BREAKOUT\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for row in ema_results:
-
-            f.write(
-                f"{row[0]} | "
-                f"Price:{row[1]} | "
-                f"Change:{row[2]} | "
-                f"Volume:{row[3]}\n"
-            )
-
-        f.write("\n")
-
-        # ----------------------------------------------------
-        # NH-CONS
-        # ----------------------------------------------------
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        f.write(
-            "10% BELOW 52W HIGH & CONSOLIDATING\n"
-        )
-
-        f.write(
-            "=" * 60 + "\n"
-        )
-
-        for row in near_high_results:
-
-            f.write(
-                f"{row[0]} | "
-                f"Price:{row[1]} | "
-                f"Change:{row[2]} | "
-                f"Volume:{row[3]}\n"
+                symbol + "\n"
             )
 
     print(
-        f"\nCreated {WATCHLIST_FILE}"
+        f"\nCreated TradingView watchlist: "
+        f"{WATCHLIST_FILE}"
+    )
+
+    print(
+        f"Total unique symbols: "
+        f"{len(symbols)}"
     )
 
 
@@ -1358,7 +1258,7 @@ def run():
     else:
 
         ib_cons_watch_table = (
-            "No Green zone Supertrend stocks with flat supertrend today."
+            "No IB → CONS stocks today."
         )
 
     # ========================================================
@@ -1405,7 +1305,7 @@ def run():
         )
 
     # ========================================================
-    # CREATE WATCHLIST FILE
+    # CREATE TRADINGVIEW WATCHLIST FILE
     # ========================================================
 
     create_watchlist_file(
@@ -1422,7 +1322,7 @@ def run():
     # TELEGRAM MESSAGE
     #
     # HTML is used instead of Markdown.
-    # Tables are inside <pre>, avoiding Markdown parsing errors.
+    # Tables are inside <pre>.
     # ========================================================
 
     message = (
@@ -1437,9 +1337,18 @@ def run():
         f"{dashboard_table}"
         "</pre>\n\n"
 
-        "⚡ <b>CLOSE ABOVE SUPERTREND &amp; NEAR 52W LOW</b>\n"
+        "⚡ <b>CLOSE ABOVE SUPERTREND &amp; "
+        "NEAR 52W LOW</b>\n"
         "<pre>"
         f"{ib_table}"
+        "</pre>\n\n"
+
+        "🔥🔥🔥 <b>IB → CONS WATCH</b> 🔥🔥🔥\n"
+        "<i>Appeared in IB during the last 5 trading days "
+        "AND is in CONS today.</i>\n"
+        "<i>IB shows the most recent IB appearance.</i>\n"
+        "<pre>"
+        f"{ib_cons_watch_table}"
         "</pre>\n\n"
 
         "⚡⚡ <b>SUPERTREND CONTRACTION "
@@ -1457,13 +1366,10 @@ def run():
         "&amp; CONSOLIDATING</b>\n"
         "<pre>"
         f"{nh_cons_table}"
-        "</pre>\n\n\n"
+        "</pre>\n\n"
 
-        "🔥🔥 Stock Supertend got positve and flat supertrend  🔥🔥\n\n"
-        f"{ib_cons_watch_table}"
-        "<pre>\n\n"
-        "<i>Entery Above the Swing High for the time Supertrend is flat </i>\n"
-        "</pre>"
+        "🔥🔥 <b>SUPERTREND POSITIVE &amp; FLAT</b> 🔥🔥\n\n"
+        "<i>Entry above the swing high while Supertrend remains flat.</i>\n"
     )
 
     # ========================================================
@@ -1482,7 +1388,7 @@ def run():
     )
 
     print(
-        "\nSending watchlist file..."
+        "\nSending TradingView watchlist file..."
     )
 
     send_telegram_file(
@@ -1532,6 +1438,11 @@ def run():
     print(
         f"IB history days stored: "
         f"{len(ib_history)}"
+    )
+
+    print(
+        f"TradingView watchlist symbols: "
+        f"{sum(1 for _ in open(WATCHLIST_FILE, encoding='utf-8'))}"
     )
 
     print(
