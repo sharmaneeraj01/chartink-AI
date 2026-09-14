@@ -1442,14 +1442,6 @@ def run():
         f"{ib_table}"
         "</pre>\n\n"
 
-        "🔥🔥🔥 <b>IB → CONS WATCH</b> 🔥🔥🔥\n"
-        "<i>Appeared in IB during the last 5 trading days "
-        "AND is in CONS today.</i>\n"
-        "<i>IB shows the most recent IB appearance.</i>\n"
-        "<pre>"
-        f"{ib_cons_watch_table}"
-        "</pre>\n\n"
-
         "⚡⚡ <b>SUPERTREND CONTRACTION "
         "SWING HIGH BREAKOUT WAIT</b>\n"
         "<pre>"
@@ -1465,6 +1457,12 @@ def run():
         "&amp; CONSOLIDATING</b>\n"
         "<pre>"
         f"{nh_cons_table}"
+        "</pre>\n\n"
+
+        "🔥🔥 Stock Supertend got positve and flat supertrend  🔥🔥\n"
+        "<i>Entery Above the Swing High for the time Supertrend is flat </i>\n"
+        "<pre>"
+        f"{ib_cons_watch_table}"
         "</pre>"
     )
 
