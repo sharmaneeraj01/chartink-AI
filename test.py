@@ -707,7 +707,7 @@ def run():
         # NEW NH-CONS
         # ----------------------------------------------------
 
-        "*🔥 Near 52W High & Consolidating*\n"
+        "*🔥⚡ 10% Low Near 52W High & Consolidating*\n"
         "```\n"
         f"{near_high_consolidation_table}\n"
         "```"
