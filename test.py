@@ -1358,7 +1358,7 @@ def run():
     else:
 
         ib_cons_watch_table = (
-            "No IB → CONS stocks today."
+            "No Green zone Supertrend stocks with flat supertrend today."
         )
 
     # ========================================================
@@ -1457,12 +1457,12 @@ def run():
         "&amp; CONSOLIDATING</b>\n"
         "<pre>"
         f"{nh_cons_table}"
-        "</pre>\n\n"
+        "</pre>\n\n\n"
 
         "🔥🔥 Stock Supertend got positve and flat supertrend  🔥🔥\n"
-        "<i>Entery Above the Swing High for the time Supertrend is flat </i>\n"
-        "<pre>"
         f"{ib_cons_watch_table}"
+        "<pre>"
+        "<i>Entery Above the Swing High for the time Supertrend is flat </i>\n"
         "</pre>"
     )
 
