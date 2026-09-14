@@ -1459,9 +1459,9 @@ def run():
         f"{nh_cons_table}"
         "</pre>\n\n\n"
 
-        "🔥🔥 Stock Supertend got positve and flat supertrend  🔥🔥\n"
+        "🔥🔥 Stock Supertend got positve and flat supertrend  🔥🔥\n\n"
         f"{ib_cons_watch_table}"
-        "<pre>"
+        "<pre>\n\n"
         "<i>Entery Above the Swing High for the time Supertrend is flat </i>\n"
         "</pre>"
     )
